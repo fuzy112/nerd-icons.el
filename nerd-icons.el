@@ -37,9 +37,11 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'map)
 
-(require 'nerd-icons-data)
 (require 'nerd-icons-faces)
+(eval-when-compile
+  (require 'nerd-icons-data))
 
 (declare-function set-fontset-font "src/fontset.c")
 
@@ -1169,11 +1171,9 @@ If SHOW-GLYPH-SET is non-nil, displays the icons glyph set in the candidate
 string."
   (let ((data   (funcall (nerd-icons--data-name glyph-set)))
         (icon-f (nerd-icons--function-name glyph-set)))
-    (mapcar
-     (lambda (it)
-       (let* ((icon-name (car it))
-
-              (icon-display (funcall icon-f icon-name))
+    (map-apply
+     (lambda (icon-name icon-data)
+       (let* ((icon-display (funcall icon-f icon-name))
               (icon-glyph-set (if show-glyph-set (format "\t[%s]" glyph-set) ""))
 
               (candidate-name (format "%s\t%s%s" icon-display icon-name icon-glyph-set))
@@ -1411,9 +1411,9 @@ pause for DURATION seconds between printing each character."
 
          (height (or height 1.0))
          (data (funcall data-f)))
-    (mapc
-     (lambda (it)
-       (insert (format "%s - %s\n" (funcall insert-f (car it) :height height) (car it)))
+    (map-do
+     (lambda (icon-name _icon-data)
+       (insert (format "%s - %s\n" (funcall insert-f icon-name :height height) icon-name))
        (when duration (sit-for duration)))
      data)))
 
@@ -1459,9 +1459,14 @@ GLYPH-SET is the glyph set of the icon."
      (add-to-list 'nerd-icons-glyph-sets (quote ,name))
      (defun ,(nerd-icons--family-name name) () ,family)
      (defun ,(nerd-icons--glyph-set-name name) () ,glyph-set)
-     (defun ,(nerd-icons--data-name name) () ,alist)
+     (defun ,(nerd-icons--data-name name) ()
+       (eval-when-compile
+         (let ((table (make-hash-table :test 'equal)))
+           (dolist (elt ,alist)
+             (puthash (car elt) (cdr elt) table))
+           table)))
      (defun ,(nerd-icons--function-name name) (icon-name &rest args)
-       (let ((icon (cdr (assoc icon-name ,alist)))
+       (let ((icon (gethash icon-name (,(nerd-icons--data-name name))))
              (other-face (when nerd-icons-color-icons (plist-get args :face)))
              (height (* nerd-icons-scale-factor (or (plist-get args :height) 1.0)))
              (v-adjust (* nerd-icons-scale-factor (or (plist-get args :v-adjust) nerd-icons-default-adjust)))
