@@ -38,8 +38,9 @@
 
 (require 'cl-lib)
 
-(require 'nerd-icons-data)
 (require 'nerd-icons-faces)
+(eval-when-compile
+  (require 'nerd-icons-data))
 
 (declare-function set-fontset-font "src/fontset.c")
 
@@ -1373,9 +1374,14 @@ GLYPH-SET is the glyph set of the icon."
      (add-to-list 'nerd-icons-glyph-sets (quote ,name))
      (defun ,(nerd-icons--family-name name) () ,family)
      (defun ,(nerd-icons--glyph-set-name name) () ,glyph-set)
-     (defun ,(nerd-icons--data-name name) () ,alist)
+     (defun ,(nerd-icons--data-name name) ()
+       (eval-when-compile
+         (let ((table (make-hash-table :test 'equal)))
+           (dolist (elt ,alist)
+             (puthash (car elt) (cdr elt) table))
+           table)))
      (defun ,(nerd-icons--function-name name) (icon-name &rest args)
-       (let ((icon (cdr (assoc icon-name ,alist)))
+       (let ((icon (gethash icon-name (,(nerd-icons--data-name name))))
              (other-face (when nerd-icons-color-icons (plist-get args :face)))
              (height (* nerd-icons-scale-factor (or (plist-get args :height) 1.0)))
              (v-adjust (* nerd-icons-scale-factor (or (plist-get args :v-adjust) nerd-icons-default-adjust)))
