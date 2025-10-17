@@ -37,6 +37,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'map)
 
 (require 'nerd-icons-faces)
 (eval-when-compile
@@ -1100,11 +1101,9 @@ If SHOW-GLYPH-SET is non-nil, displays the icons glyph set in the candidate
 string."
   (let ((data   (funcall (nerd-icons--data-name glyph-set)))
         (icon-f (nerd-icons--function-name glyph-set)))
-    (mapcar
-     (lambda (it)
-       (let* ((icon-name (car it))
-
-              (icon-display (funcall icon-f icon-name))
+    (map-apply
+     (lambda (icon-name icon-data)
+       (let* ((icon-display (funcall icon-f icon-name))
               (icon-glyph-set (if show-glyph-set (format "\t[%s]" glyph-set) ""))
 
               (candidate-name (format "%s\t%s%s" icon-display icon-name icon-glyph-set))
@@ -1360,9 +1359,9 @@ pause for DURATION seconds between printing each character."
 
          (height (or height 1.0))
          (data (funcall data-f)))
-    (mapc
-     (lambda (it)
-       (insert (format "%s - %s\n" (funcall insert-f (car it) :height height) (car it)))
+    (map-do
+     (lambda (icon-name _icon-data)
+       (insert (format "%s - %s\n" (funcall insert-f icon-name :height height) icon-name))
        (when duration (sit-for duration)))
      data)))
 
