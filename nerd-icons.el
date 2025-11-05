@@ -5,7 +5,7 @@
 ;; Author: Hongyu Ding <rainstormstudio@yahoo.com>, Vincent Zhang <seagle0128@gmail.com>
 ;; Keywords: lisp
 ;; Version: 0.1.0
-;; Package-Requires: ((emacs "24.3"))
+;; Package-Requires: ((emacs "25.1"))
 ;; URL: https://github.com/rainstormstudio/nerd-icons.el
 ;; Keywords: convenient, lisp
 
@@ -130,6 +130,7 @@
     ("conf"           nerd-icons-codicon "nf-cod-settings"       :face nerd-icons-dorange)
     ("editorconfig"   nerd-icons-sucicon "nf-seti-editorconfig"  :face nerd-icons-silver)
     ("idekeybindings" nerd-icons-faicon "nf-fa-file_code_o"      :face nerd-icons-lblue)
+    ("cfg"            nerd-icons-codicon "nf-cod-settings"       :face nerd-icons-dorange)
     ;; ?
     ("pkg"            nerd-icons-octicon "nf-oct-package"        :face nerd-icons-dsilver)
     ("rpm"            nerd-icons-octicon "nf-oct-package"        :face nerd-icons-dsilver)
@@ -198,6 +199,7 @@
     ("gem"            nerd-icons-codicon "nf-cod-ruby"           :face nerd-icons-red)
     ;; ("raku"        nerd-icons-devicon "raku") TODO: raku
     ;; ("rakumod"     nerd-icons-devicon "raku") TODO: raku
+    ("qml"            nerd-icons-devicon "nf-dev-qt"             :face nerd-icons-yellow)
     ("rb"             nerd-icons-codicon "nf-cod-ruby"           :face nerd-icons-lred)
     ("rs"             nerd-icons-devicon "nf-dev-rust"           :face nerd-icons-maroon)
     ("rlib"           nerd-icons-devicon "nf-dev-rust"           :face nerd-icons-dmaroon)
@@ -728,8 +730,7 @@
     (paradox-menu-mode                 nerd-icons-faicon "nf-fa-archive"                 :face nerd-icons-silver)
     (Custom-mode                       nerd-icons-codicon "nf-cod-settings")
 
-    ;; Special matcher for Web Mode based on the `web-mode-content-type' of the current buffer
-    (web-mode                          nerd-icons--web-mode-icon)
+    (web-mode                          nerd-icons-devicon "nf-dev-html5")
 
     (fundamental-mode                  nerd-icons-sucicon "nf-custom-emacs"              :face nerd-icons-dsilver)
     (special-mode                      nerd-icons-sucicon "nf-custom-emacs"              :face nerd-icons-yellow)
@@ -1221,18 +1222,27 @@ inserting functions."
     (when arg-overrides (setq args (append `(,(car args)) arg-overrides (cdr args))))
     (apply (car icon) args)))
 
+(defalias 'nerd-icons--mode-parents
+  (if (< emacs-major-version 30)
+      (lambda (mode)
+        "Return all parents for the given MODE, starting with MODE."
+        (when mode
+          (cons mode (nerd-icons--mode-parents
+                      (get mode 'derived-mode-parent)))))
+    'derived-mode-all-parents))
+
 ;;;###autoload
 (defun nerd-icons-icon-for-mode (mode &rest arg-overrides)
   "Get the formatted icon for MODE.
 ARG-OVERRIDES should be a plist containining `:height',
 `:v-adjust' or `:face' properties like in the normal icon
 inserting functions."
-  (let* ((icon (or (cdr (or (assoc mode nerd-icons-mode-icon-alist)
-                            (assoc (get mode 'derived-mode-parent) nerd-icons-mode-icon-alist)))
-                   nerd-icons-default-file-icon))
-         (args (cdr icon)))
-    (when arg-overrides (setq args (append `(,(car args)) arg-overrides (cdr args))))
-    (if icon (apply (car icon) args) mode)))
+  (let* ((modes (nerd-icons--mode-parents mode))
+         (icon (cdr (cl-some (lambda (m) (assq m nerd-icons-mode-icon-alist)) modes))))
+    (when icon
+      (if arg-overrides
+          (apply (car icon) (cadr icon) (append arg-overrides (cddr icon)))
+        (apply (car icon) (cdr icon))))))
 
 ;;;###autoload
 (defun nerd-icons-icon-for-url (url &rest arg-overrides)
@@ -1250,7 +1260,7 @@ inserting functions."
     (apply (car icon) args)))
 
 ;;;###autoload
-(defun nerd-icons-icon-for-buffer (&rest arg-overrides)
+(cl-defgeneric nerd-icons-icon-for-buffer (&rest arg-overrides)
   "Get the formatted icon for the current buffer.
 
 ARG-OVERRIDES should be a plist containing `:height',
@@ -1293,35 +1303,8 @@ icon."
 (defun nerd-icons-icon-for-weather (weather)
   "Get an icon for a WEATHER status."
   (let ((icon (nerd-icons-match-to-alist weather nerd-icons-weather-icon-alist)))
-    (if icon (apply (car icon) (cdr icon)) weather)))
-
-;; For `web-mode'
-(defun nerd-icons--web-mode-icon (&rest arg-overrides)
-  "Get icon for a `web-mode' buffer with ARG-OVERRIDES."
-  (nerd-icons--web-mode arg-overrides))
-(defun nerd-icons--web-mode-icon-family ()
-  "Get icon family for a `web-mode' buffer."
-  (nerd-icons--web-mode t))
-
-(defvar web-mode-content-type)          ; external
-(defun nerd-icons--web-mode (&optional arg-overrides)
-  "Return icon or FAMILY for `web-mode' based on `web-mode-content-type'.
-Providing ARG-OVERRIDES will modify the creation of the icon."
-  (let ((non-nil-args (cl-reduce (lambda (acc it) (if it (append acc (list it)) acc))
-                                 arg-overrides :initial-value '())))
-    (cond
-     ((equal web-mode-content-type "jsx")
-      (apply 'nerd-icons-devicon (append '("javascript") non-nil-args)))
-     ((equal web-mode-content-type "javascript")
-      (apply 'nerd-icons-devicon (append '("javascript") non-nil-args)))
-     ((equal web-mode-content-type "json")
-      (apply 'nerd-icons-devicon (append '("nf-dev-less") non-nil-args)))
-     ((equal web-mode-content-type "xml")
-      (apply 'nerd-icons-faicon (append '("nf-fa-file_code_o") non-nil-args)))
-     ((equal web-mode-content-type "css")
-      (apply 'nerd-icons-devicon (append '("nf-dev-css3") non-nil-args)))
-     (t
-      (apply 'nerd-icons-devicon (append '("nf-dev-html5") non-nil-args))))))
+    (when icon
+      (apply (car icon) (cdr icon)))))
 
 (eval-and-compile
   (defun nerd-icons--function-name (name)
