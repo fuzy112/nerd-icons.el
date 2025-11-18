@@ -788,8 +788,10 @@
     (graphql-mode                      nerd-icons-sucicon "nf-seti-graphql"              :face nerd-icons-dpink)
     (matlab-mode                       nerd-icons-devicon "nf-dev-matlab"                :face nerd-icons-orange)
     (nix-mode                          nerd-icons-mdicon  "nf-md-nix"                    :face nerd-icons-blue)
+    (nix-ts-mode                       nerd-icons-mdicon  "nf-md-nix"                    :face nerd-icons-blue)
     (perl-mode                         nerd-icons-sucicon "nf-seti-perl"                 :face nerd-icons-lorange)
     (cperl-mode                        nerd-icons-sucicon "nf-seti-perl"                 :face nerd-icons-lorange)
+    (perl-ts-mode                      nerd-icons-sucicon "nf-seti-perl"                 :face nerd-icons-lorange)
     (php-mode                          nerd-icons-devicon "nf-dev-php"                   :face nerd-icons-lsilver)
     (php-ts-mode                       nerd-icons-devicon "nf-dev-php"                   :face nerd-icons-lsilver)
     (prolog-mode                       nerd-icons-devicon "nf-dev-prolog"                :face nerd-icons-lmaroon)
@@ -1238,7 +1240,8 @@ ARG-OVERRIDES should be a plist containining `:height',
 `:v-adjust' or `:face' properties like in the normal icon
 inserting functions."
   (let* ((modes (nerd-icons--mode-parents mode))
-         (icon (cdr (cl-some (lambda (m) (assq m nerd-icons-mode-icon-alist)) modes))))
+         (icon (cdr (or (cl-some (lambda (m) (assq m nerd-icons-mode-icon-alist)) modes)
+                        (assq 'fundamental-mode nerd-icons-mode-icon-alist)))))
     (when icon
       (if arg-overrides
           (apply (car icon) (cadr icon) (append arg-overrides (cddr icon)))
